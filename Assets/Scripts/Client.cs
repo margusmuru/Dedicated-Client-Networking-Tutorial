@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net.Sockets;
 using UnityEngine;
 
@@ -11,6 +12,10 @@ public class Client : MonoBehaviour
     public int port = 26950;
     public int myId = 0;
     public Tcp tcp;
+
+    private delegate void PacketHandler(Packet packet);
+
+    private static Dictionary<int, PacketHandler> _packetHandlers;
 
     public void Awake()
     {
@@ -32,6 +37,7 @@ public class Client : MonoBehaviour
 
     public void ConnectToServer()
     {
+        InitializeClientData();
         tcp.Connect();
     }
 
@@ -39,6 +45,7 @@ public class Client : MonoBehaviour
     {
         public TcpClient Socket;
         private NetworkStream _stream;
+        private Packet _receivedData;
         private byte[] _recieveBuffer;
 
         public void Connect()
@@ -48,7 +55,6 @@ public class Client : MonoBehaviour
                 ReceiveBufferSize = dataBufferSize,
                 SendBufferSize = dataBufferSize
             };
-
             _recieveBuffer = new byte[dataBufferSize];
             Socket.BeginConnect(Instance.ip, Instance.port, ConnectCallback, Socket);
         }
@@ -62,7 +68,23 @@ public class Client : MonoBehaviour
             }
 
             _stream = Socket.GetStream();
+            _receivedData = new Packet();
             _stream.BeginRead(_recieveBuffer, 0, dataBufferSize, RecieveCallback, null);
+        }
+
+        public void SendData(Packet packet)
+        {
+            try
+            {
+                if (Socket != null)
+                {
+                    _stream.BeginWrite(packet.ToArray(), 0, packet.Length(), null, null);
+                }
+            }
+            catch (Exception exception)
+            {
+                Debug.Log($"Error sending data to server via TCP: {exception}");
+            }
         }
 
         private void RecieveCallback(IAsyncResult result)
@@ -75,9 +97,10 @@ public class Client : MonoBehaviour
                     // TODO disconnect
                     return;
                 }
+
                 byte[] data = new byte[byteLength];
                 Array.Copy(_recieveBuffer, data, byteLength);
-
+                _receivedData.Reset(HandleData(data));
                 _stream.BeginRead(_recieveBuffer, 0, dataBufferSize, RecieveCallback, null);
             }
             catch (Exception ex)
@@ -86,5 +109,58 @@ public class Client : MonoBehaviour
                 // TODO disconnect
             }
         }
+
+        private bool HandleData(byte[] data)
+        {
+            int packetLength = 0;
+            _receivedData.SetBytes(data);
+            if (_receivedData.UnreadLength() >= 4)
+            {
+                packetLength = _receivedData.ReadInt();
+                if (packetLength <= 0)
+                {
+                    return true;
+                }
+            }
+
+            while (packetLength > 0 && packetLength <= _receivedData.UnreadLength())
+            {
+                byte[] packetBytes = _receivedData.ReadBytes(packetLength);
+                ThreadManager.ExecuteOnMainThread(() =>
+                {
+                    using (Packet packet = new Packet(packetBytes))
+                    {
+                        int packetId = packet.ReadInt();
+                        _packetHandlers[packetId](packet);
+                    }
+                });
+
+                packetLength = 0;
+                if (_receivedData.UnreadLength() >= 4)
+                {
+                    packetLength = _receivedData.ReadInt();
+                    if (packetLength <= 0)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            if (packetLength <= 1)
+            {
+                return true;
+            }
+
+            return false;
+        }
+    }
+
+    private void InitializeClientData()
+    {
+        _packetHandlers = new Dictionary<int, PacketHandler>()
+        {
+            {(int) ServerPackets.welcome, ClientHandle.Welcome}
+        };
+        Debug.Log("Initialized packets.");
     }
 }
