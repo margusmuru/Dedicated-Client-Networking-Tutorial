@@ -9,6 +9,12 @@ public class ClientSend : MonoBehaviour
         packet.WriteLength();
         Client.Instance.tcp.SendData(packet);
     }
+
+    private static void SendUdpData(Packet packet)
+    {
+        packet.WriteLength();
+        Client.Instance.udp.SendData(packet);
+    }
     
     #region Packets
 
@@ -20,6 +26,15 @@ public class ClientSend : MonoBehaviour
             packet.Write(UIManager.Instance.userNameField.text);
             
             SendTcpData(packet);
+        }
+    }
+
+    public static void UdpTestRecieved()
+    {
+        using (Packet packet = new Packet((int) ClientPackets.udpTestReceived))
+        {
+            packet.Write("Received a UDP packet.");
+            SendUdpData(packet);
         }
     }
     #endregion
