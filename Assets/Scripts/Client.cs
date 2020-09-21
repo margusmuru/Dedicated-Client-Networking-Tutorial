@@ -227,7 +227,7 @@ public class Client : MonoBehaviour
             
             ThreadManager.ExecuteOnMainThread(() =>
             {
-                using (Packet packet = new Packet())
+                using (Packet packet = new Packet(data))
                 {
                     int packetId = packet.ReadInt();
                     _packetHandlers[packetId](packet);
@@ -240,8 +240,10 @@ public class Client : MonoBehaviour
     {
         _packetHandlers = new Dictionary<int, PacketHandler>()
         {
-            {(int) ServerPackets.welcome, ClientHandle.Welcome},
-            {(int) ServerPackets.udpTest, ClientHandle.UdpTest}
+            {(int) ServerPackets.Welcome, ClientHandle.Welcome},
+            {(int) ServerPackets.SpawnPlayer, ClientHandle.SpawnPlayer},
+            {(int) ServerPackets.PlayerPosition, ClientHandle.PlayerPosition},
+            {(int) ServerPackets.PlayerRotation, ClientHandle.PlayerRotation}
         };
         Debug.Log("Initialized packets.");
     }
