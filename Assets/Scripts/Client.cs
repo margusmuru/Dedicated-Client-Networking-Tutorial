@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.Design.Serialization;
 using System.Net;
 using System.Net.Sockets;
 using UnityEngine;
@@ -248,7 +247,7 @@ public class Client : MonoBehaviour
                 int packetLength = packet.ReadInt();
                 data = packet.ReadBytes(packetLength);
             }
-            
+
             ThreadManager.ExecuteOnMainThread(() =>
             {
                 using (Packet packet = new Packet(data))
@@ -259,7 +258,7 @@ public class Client : MonoBehaviour
             });
         }
     }
-    
+
     private void InitializeClientData()
     {
         _packetHandlers = new Dictionary<int, PacketHandler>()
@@ -267,7 +266,10 @@ public class Client : MonoBehaviour
             {(int) ServerPackets.Welcome, ClientHandle.Welcome},
             {(int) ServerPackets.SpawnPlayer, ClientHandle.SpawnPlayer},
             {(int) ServerPackets.PlayerPosition, ClientHandle.PlayerPosition},
-            {(int) ServerPackets.PlayerRotation, ClientHandle.PlayerRotation}
+            {(int) ServerPackets.PlayerRotation, ClientHandle.PlayerRotation},
+            {(int) ServerPackets.PlayerDisconnected, ClientHandle.PlayerDisconnected},
+            {(int) ServerPackets.PlayerHealth, ClientHandle.PlayerHealth},
+            {(int) ServerPackets.PlayerRespawned, ClientHandle.PlayerRespawned}
         };
         Debug.Log("Initialized packets.");
     }

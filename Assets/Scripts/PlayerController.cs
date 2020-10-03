@@ -2,6 +2,16 @@
 
 public class PlayerController : MonoBehaviour
 {
+    public Transform CamTransform;
+    
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Mouse0))
+        {
+            ClientSend.PlayerShoot(CamTransform.forward);
+        }
+    }
+    
     private void FixedUpdate()
     {
         SendInputToServer();
